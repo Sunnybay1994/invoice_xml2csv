@@ -1,0 +1,344 @@
+/**
+ * Created by wangyao7 on 2017/3/30.
+ */
+//过滤单位名称特殊字符
+function stripscriptCompany(value) {
+    var pattern = new RegExp("[`~!@$%^&*=|';\\\\<>?~！￥……&*&;|‘；：”“'？\"]");
+    if(pattern.test(value))
+    {
+        return true;
+    }
+    return false;
+}
+//过滤特殊字符
+function stripscript(value) {
+    var pattern = new RegExp("[`~!@$%^&*=|':;'\\\\<>?~！￥……&*&;|‘；：”“'？\"]");
+    if(pattern.test(value))
+    {
+        return true;
+    }
+    return false;
+}
+//过滤特殊字符（税号专用）
+function taxScript(value) {
+    var pattern = new RegExp(
+        "[IOZS]"
+    );
+    if (pattern.test(value)) {
+        return true;
+    }
+    return false;
+}
+
+//过滤特殊字符(手机号专用，不过滤*号)
+function stripscriptForTel(value) {
+    var pattern = new RegExp("[`~!@$%^&+=|':;',\\\\<>/?~！￥……&&;|‘；：”“'，？\"]");
+    if(pattern.test(value))
+    {
+        return true;
+    }
+    return false;
+}
+
+//过滤特殊字符(邮箱专用，不过滤@号)
+function stripscriptForEmail(value) {
+    var pattern = new RegExp("[`~!$%^&+=|':;',\\\\<>/?~！￥……&&;|‘；：”“'，？\"]");
+    if(pattern.test(value))
+    {
+        return true;
+    }
+    return false;
+}
+
+function replaceBracketsByJquertObject(jquertObject) {
+    CtoH(jquertObject);
+    var inputValue = jquertObject.val();
+    while (inputValue.indexOf("<") != -1) {
+        inputValue = inputValue.replace("<", "[");
+    }
+    while (inputValue.indexOf(">") != -1) {
+        inputValue = inputValue.replace(">", "]");
+    }
+    while (inputValue.indexOf("&") != -1) {
+        inputValue = inputValue.replace("&", " ");
+    }
+    while (inputValue.indexOf("——") != -1) {
+        inputValue = inputValue.replace("——", "-");
+    }
+    jquertObject.val($.trim(inputValue));
+}
+
+function replaceBracketsByJquertObjectWithoutCtoH(jquertObject) {
+    var inputValue = jquertObject.val();
+    while (inputValue.indexOf("<") != -1) {
+        inputValue = inputValue.replace("<", "[");
+    }
+    while (inputValue.indexOf(">") != -1) {
+        inputValue = inputValue.replace(">", "]");
+    }
+    while (inputValue.indexOf("&") != -1) {
+        inputValue = inputValue.replace("&", " ");
+    }
+    while (inputValue.indexOf("——") != -1) {
+        inputValue = inputValue.replace("——", "-");
+    }
+    jquertObject.val($.trim(inputValue));
+}
+
+function CtoH(jquertObject) {
+    var str = jquertObject.val();
+    var result = "";
+    for ( var i = 0; i < str.length; i++) {
+        code = str.charCodeAt(i);
+        if (code >= 65281 && code <= 65373) {
+            result += String.fromCharCode(str.charCodeAt(i) - 65248);
+        } else if (code == 12288) {
+            result += String.fromCharCode(str.charCodeAt(i) - 12256);
+        } else {
+            result += str.charAt(i);
+        }
+    }
+    jquertObject.val(result);
+}
+
+function isChinese(temp)
+{
+    var re=/[^\u4e00-\u9fa5]/;
+    if(re.test(temp)) return false;
+    return true;
+}
+function checkLength(txtObj) {
+    var val = txtObj || '';
+    var valLength = 0;
+    for (var ii = 0; ii < val.length; ii++) {
+        var word=val.charAt(ii)+""
+
+        if (isChinese(word)) {
+            valLength += 2;
+        } else {
+            valLength++;
+        }
+    }
+    return valLength;
+}
+
+function popMsg(errorMsg){
+    jDialog('.error').toast({
+        textBox:'.error-tip',
+        inner:errorMsg,
+        duration:2000,
+        bottom: 80
+    });
+}
+
+function checkUrl(value) {
+    if(value.toLowerCase().indexOf(".cn")>0||value.toLowerCase().indexOf("。cn")>0||value.toLowerCase().indexOf("．cn")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".com")>0||value.toLowerCase().indexOf("。com")>0||value.toLowerCase().indexOf("．com")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".net")>0||value.toLowerCase().indexOf("。net")>0||value.toLowerCase().indexOf("．net")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".org")>0||value.toLowerCase().indexOf("。org")>0||value.toLowerCase().indexOf("．org")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".gov")>0||value.toLowerCase().indexOf("。gov")>0||value.toLowerCase().indexOf("．gov")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".edu")>0||value.toLowerCase().indexOf("。edu")>0||value.toLowerCase().indexOf("．edu")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".biz")>0||value.toLowerCase().indexOf("。biz")>0||value.toLowerCase().indexOf("．biz")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".info")>0||value.toLowerCase().indexOf("。info")>0||value.toLowerCase().indexOf("．info")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".pro")>0||value.toLowerCase().indexOf("。pro")>0||value.toLowerCase().indexOf("．pro")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".name")>0||value.toLowerCase().indexOf("。name")>0||value.toLowerCase().indexOf("．name")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".gg")>0||value.toLowerCase().indexOf("。gg")>0||value.toLowerCase().indexOf("．gg")>0){
+        return true;
+    }else if(value.indexOf("退款")>=0&&value.indexOf("维权")>=0){
+        return true;
+    }else if(value.indexOf("退款")>=0&&value.indexOf("京东")>=0){
+        return true;
+    }else if(value.indexOf("退款")>=0&&value.indexOf("售后")>=0){
+        return true;
+    }else if(value.indexOf("维权")>=0&&value.indexOf("售后")>=0){
+        return true;
+    }else if(value.indexOf("退款")>=0&&value.indexOf("http")>=0){
+        return true;
+    }else if(value.indexOf("退款")>=0&&value.indexOf("订单")>=0&&value.indexOf("qq")>=0){
+        return true;
+    }else if(value.indexOf("消费者")>=0&&value.indexOf("维权")>=0){
+        return true;
+    }else if(value.indexOf("订单号")>=0&&value.indexOf("www")>=0){
+        return true;
+    }else if(value.indexOf("维权")>=0&&value.indexOf("qq")>=0&&value.indexOf("工号")>=0){
+        return true;
+    }else if(value.indexOf("申诉")>=0&&value.indexOf("qq")>=0&&value.indexOf("维权")>=0){
+        return true;
+    }else if(value.indexOf("处理")>=0&&value.indexOf("添加")>=0&&value.indexOf("qq")>=0){
+        return true;
+    }else if(value.indexOf("消费者")>=0&&value.indexOf("申诉")>=0&&value.indexOf("订单")>=0){
+        return true;
+    }else if(value.indexOf("售后")>=0&&value.indexOf("处理")>=0&&value.indexOf("工号")>=0){
+        return true;
+    }else if(value.indexOf("系统")>=0&&value.indexOf("工号")>=0){
+        return true;
+    }else if(value.indexOf("退款")>=0){
+        return true;
+    }else if(value.indexOf("异常")>=0){
+        return true;
+    }else if(value.indexOf("错误")>=0){
+        return true;
+    }else if(value.indexOf("取消")>=0){
+        return true;
+    }else if(value.indexOf("失效")>=0){
+        return true;
+    }else if(value.indexOf("繁忙")>=0){
+        return true;
+    }else if(value.indexOf("回执单")>=0){
+        return true;
+    }else if(value.indexOf("损坏")>=0){
+        return true;
+    }else if(value.indexOf("损毁")>=0){
+        return true;
+    }else if(value.indexOf("协议单")>=0){
+        return true;
+    }else if(value.indexOf("浏览器")>=0){
+        return true;
+    }else if(value.indexOf("点com")>=0){
+        return true;
+    }else if(value.indexOf("点COM")>=0){
+        return true;
+    }else if(value.indexOf("系统自动")>=0){
+        return true;
+    }else if(value.indexOf("理赔退款")>=0){
+        return true;
+    }else if(value.indexOf("物流损")>=0){
+        return true;
+    }else if(value.indexOf("com")>=0){
+        return true;
+    }else if(value.indexOf(".")>=0){
+        return true;
+    }
+    return false;
+}
+
+function checkUrlForAddressAndKHH(value) {
+    if(value.toLowerCase().indexOf(".cn")>0||value.toLowerCase().indexOf("。cn")>0||value.toLowerCase().indexOf("．cn")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".com")>0||value.toLowerCase().indexOf("。com")>0||value.toLowerCase().indexOf("．com")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".net")>0||value.toLowerCase().indexOf("。net")>0||value.toLowerCase().indexOf("．net")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".org")>0||value.toLowerCase().indexOf("。org")>0||value.toLowerCase().indexOf("．org")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".gov")>0||value.toLowerCase().indexOf("。gov")>0||value.toLowerCase().indexOf("．gov")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".edu")>0||value.toLowerCase().indexOf("。edu")>0||value.toLowerCase().indexOf("．edu")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".biz")>0||value.toLowerCase().indexOf("。biz")>0||value.toLowerCase().indexOf("．biz")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".info")>0||value.toLowerCase().indexOf("。info")>0||value.toLowerCase().indexOf("．info")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".pro")>0||value.toLowerCase().indexOf("。pro")>0||value.toLowerCase().indexOf("．pro")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".name")>0||value.toLowerCase().indexOf("。name")>0||value.toLowerCase().indexOf("．name")>0){
+        return true;
+    }else if(value.toLowerCase().indexOf(".gg")>0||value.toLowerCase().indexOf("。gg")>0||value.toLowerCase().indexOf("．gg")>0){
+        return true;
+    }else if(value.indexOf("退款")>=0&&value.indexOf("维权")>=0){
+        return true;
+    }else if(value.indexOf("退款")>=0&&value.indexOf("京东")>=0){
+        return true;
+    }else if(value.indexOf("退款")>=0&&value.indexOf("售后")>=0){
+        return true;
+    }else if(value.indexOf("维权")>=0&&value.indexOf("售后")>=0){
+        return true;
+    }else if(value.indexOf("退款")>=0&&value.indexOf("http")>=0){
+        return true;
+    }else if(value.indexOf("退款")>=0&&value.indexOf("订单")>=0&&value.indexOf("qq")>=0){
+        return true;
+    }else if(value.indexOf("消费者")>=0&&value.indexOf("维权")>=0){
+        return true;
+    }else if(value.indexOf("订单号")>=0&&value.indexOf("www")>=0){
+        return true;
+    }else if(value.indexOf("维权")>=0&&value.indexOf("qq")>=0&&value.indexOf("工号")>=0){
+        return true;
+    }else if(value.indexOf("申诉")>=0&&value.indexOf("qq")>=0&&value.indexOf("维权")>=0){
+        return true;
+    }else if(value.indexOf("处理")>=0&&value.indexOf("添加")>=0&&value.indexOf("qq")>=0){
+        return true;
+    }else if(value.indexOf("消费者")>=0&&value.indexOf("申诉")>=0&&value.indexOf("订单")>=0){
+        return true;
+    }else if(value.indexOf("售后")>=0&&value.indexOf("处理")>=0&&value.indexOf("工号")>=0){
+        return true;
+    }else if(value.indexOf("系统")>=0&&value.indexOf("工号")>=0){
+        return true;
+    }else if(value.indexOf("退款")>=0){
+        return true;
+    }else if(value.indexOf("异常")>=0){
+        return true;
+    }else if(value.indexOf("错误")>=0){
+        return true;
+    }else if(value.indexOf("取消")>=0){
+        return true;
+    }else if(value.indexOf("失效")>=0){
+        return true;
+    }else if(value.indexOf("繁忙")>=0){
+        return true;
+    }else if(value.indexOf("回执单")>=0){
+        return true;
+    }else if(value.indexOf("损坏")>=0){
+        return true;
+    }else if(value.indexOf("损毁")>=0){
+        return true;
+    }else if(value.indexOf("协议单")>=0){
+        return true;
+    }else if(value.indexOf("浏览器")>=0){
+        return true;
+    }else if(value.indexOf("点com")>=0){
+        return true;
+    }else if(value.indexOf("点COM")>=0){
+        return true;
+    }else if(value.indexOf("C0M")>=0){
+        return true;
+    }else if(value.indexOf("系统自动")>=0){
+        return true;
+    }else if(value.indexOf("理赔退款")>=0){
+        return true;
+    }else if(value.indexOf("物流损")>=0){
+        return true;
+    }else if(value.indexOf("com")>=0){
+        return true;
+    }
+    return false;
+}
+
+//复制文本到剪贴板，手机端，支持ios和安卓
+function copyText(id){
+    window.getSelection().removeAllRanges();//这段代码必须放在前面否则无效
+    var Url2=document.getElementById(id);//要复制文字的节点
+    var range = document.createRange();
+    // 选中需要复制的节点
+    range.selectNode(Url2);
+    // 执行选中元素
+    window.getSelection().addRange(range);
+    // 执行 copy 操作
+    var successful = document.execCommand('copy');
+    // 移除选中的元素
+    window.getSelection().removeAllRanges();
+    popMsg("已复制到剪贴板");
+}
+
+function hasEmoji(value){
+    var regRule = /\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDE4F\uDE80-\uDEFF]/g;
+    if(value.match(regRule)) {
+        return true;
+    }
+    return false;
+}
+function hasNull(value) {
+    if (value.indexOf("null")>-1 || value.indexOf("undefined")>-1) {
+        return true;
+    }
+    return false;
+}

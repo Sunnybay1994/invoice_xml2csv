@@ -1,0 +1,701 @@
+/**
+ * Created by wangyao7 on 2018/3/26.
+ */
+function doPopBkfpReq(obj,orderId,venderId,passKey){
+    var message="";
+    var datas = "";
+
+    datas += "ivcContent=1&";//默认开明细发票
+    var ivcType = $("#ivcType").val();
+    datas += "ivcType="+ivcType+"&";
+    var ivcTitleType;
+    if (ivcType == 2) {
+        ivcTitleType = $("#ivcTitleTypeCompany").find("option:selected").text();
+    }else {
+        ivcTitleType = $("#ivcTitleTypeAll").find("option:selected").text();
+    }
+
+    if(ivcTitleType == ""){
+        message="请选择发票抬头！"
+    }
+    if(ivcTitleType != '个人'){
+        datas += "ivcTitleType="+ 5 + "&";
+
+        var companyNameResult = validateCompanyName('companyName','单位名称');
+        if(companyNameResult !=""){
+            message = companyNameResult;
+        }else{
+            datas += "ivcTitle="+ encodeURIComponent(encodeURIComponent($("#companyName").val())) + "&";
+        }
+
+        var taxNoResult = validateCusTaxNoAndCanNull('taxNo',true);
+        if(taxNoResult !=""){
+            message = taxNoResult;
+        }else{
+            datas += "taxNo="+ $("#taxNo").val() + "&";
+        }
+
+        var eiRegistAddressResult = validateRegistAddress("eiRegistAddress");
+        if (eiRegistAddressResult != "") {
+            message = eiRegistAddressResult;
+        }else{
+            datas += "registAddress="+ encodeURIComponent(encodeURIComponent($("#eiRegistAddress").val())) + "&";
+        }
+
+        var eiRegistPhoneResult = validatePhone("eiRegistPhone");
+        if (eiRegistPhoneResult != "") {
+            message = eiRegistPhoneResult;
+        }else{
+            datas += "registPhone="+ $("#eiRegistPhone").val() + "&";
+        }
+
+        var eiBankResult = validateBank("eiBank");
+        if (eiBankResult != "") {
+            message = eiBankResult;
+        }else{
+            datas += "bank="+ encodeURIComponent(encodeURIComponent($("#eiBank").val())) + "&";
+        }
+
+        var eiBankAccountResult = validateAccount("eiBankAccount");
+        if (eiBankAccountResult != "") {
+            message = eiBankAccountResult;
+        }else{
+            datas += "bankAccount="+ $("#eiBankAccount").val() + "&";
+        }
+
+        var showUserStatement = $("#showUserStatement").val();
+        var statementChecked = $("#chechbox-statement").attr("checked");
+        if (showUserStatement == "true" && statementChecked != "checked") {
+            message = "请阅读并勾选声明";
+        }
+    }else{
+        datas += "ivcTitleType="+ 4 + "&";
+
+        var ivcTitleResult = validatePersonName('ivcTitle','发票抬头');
+        if(ivcTitleResult !=""){
+            message = ivcTitleResult;
+        }else{
+            if($("#ivcTitle").val()==null || $("#ivcTitle").val() ==""){
+                datas += "ivcTitle="+ encodeURIComponent(encodeURIComponent('个人')) + "&";
+            }else{
+                datas += "ivcTitle="+ encodeURIComponent(encodeURIComponent($("#ivcTitle").val())) + "&";
+            }
+        }
+    }
+
+    if (ivcType == 1 || ivcType == 2) {
+        var areaResult = validateAddAddress();
+        if(areaResult != ""){
+            message = areaResult;
+        }
+
+        var customerName = $("#customerName").val();
+        datas += "customerName="+ encodeURIComponent(encodeURIComponent(customerName)) + "&";
+
+        var customerTel = $("#customerTel").val();
+        datas += "customerTel="+ customerTel + "&";
+
+        var provinceNum = $("#provinceNum").val();
+        datas += "province="+ provinceNum + "&";
+        datas += "provinceName="+ $("#provinceNum").find("option:selected").text() + "&";
+
+        var provinceName = $("#provinceNum").find("option:selected").text();
+        if( provinceName=="香港" || provinceName=="澳门" || provinceName=="台湾" || provinceName=="海外" ){
+            datas += "city="+ 0 + "&";
+            datas += "county="+ 0 + "&";
+        }else{
+            datas += "city="+ $("#cityNum").val() + "&";
+            datas += "cityName="+ $("#cityNum").find("option:selected").text() + "&";
+            datas += "county="+ $("#countyNum").val() + "&";
+            datas += "countyName="+$("#countyNum").find("option:selected").text() + "&";
+        }
+
+        var address = provinceName+$("#cityNum").find("option:selected").text()+$("#countyNum").find("option:selected").text()+$("#address").val();
+        datas += "address="+ encodeURIComponent(encodeURIComponent(address)) + "&";
+    }else {
+        var customerTelResult = validateTelephone("customerTelE");
+        if (customerTelResult != "") {
+            message = customerTelResult;
+        }else{
+            datas += "customerTel="+ $("#customerTelE").val() + "&";
+        }
+
+        var customerEmailResult = validateEmail("email");
+        if (customerEmailResult != "") {
+            message = customerEmailResult;
+        }else{
+            datas += "email="+ $("#email").val() + "&";
+        }
+    }
+
+    if(message !=""){
+        var baseHtml = $("#warning").html();
+        $('body').dialog({
+            title:null,
+            width:520,
+            type:'text',
+            source: baseHtml.replace('$message$',message),
+            hasButton : true,
+            cancelButton:'确定',
+            submitButton : null
+        });
+        return;
+    }
+
+    datas += "orderId="+ orderId + "&";
+    datas += "venderId="+ venderId + "&";
+    datas += "passKey="+ passKey + "&";
+    datas += "tagStr="+ $("#tagStr").val() + "&";
+
+    $(obj).css("display","none");
+    $.ajax({
+        type: "POST",
+        url: "/popFpzz/doPopBkfpReq.action",
+        data: datas,
+        dataType: "json",
+        success: function(data){
+            $(obj).removeAttr("style");
+            if (data.result == "invalid") {
+                var baseHtml = $("#warning").html();
+                $('body').dialog({
+                    title:null,
+                    width:520,
+                    type:'text',
+                    source: baseHtml.replace('$message$',data.message),
+                    hasButton : true,
+                    cancelButton:'确定',
+                    submitButton : null
+                });
+            }else if(data.result == "success"){
+                var baseHtml = $("#success").html();
+                $('body').dialog({
+                    title:null,
+                    width:520,
+                    type:'text',
+                    source: baseHtml.replace('$message$',data.message),
+                    hasButton : true,
+                    cancelButton:'确定',
+                    submitButton : null,
+                    onCancel:function(){
+                        // window.opener=null;window.close();
+                        window.location.replace(data.ivcLandUrl);
+                    }
+                });
+            }else{
+                var baseHtml = $("#warning").html();
+                $('body').dialog({
+                    title:null,
+                    width:520,
+                    type:'text',
+                    source: baseHtml.replace('$message$',"服务器忙，请稍后重试！"),
+                    hasButton : true,
+                    cancelButton:'确定',
+                    submitButton : null
+                });
+            }
+        },
+        error : function(data){
+            $(obj).removeAttr("style");
+        }
+    });
+}
+
+function validateAddAddress() {
+    var customerNameResult = validateUsername("customerName");
+    if (customerNameResult !="") {
+        return customerNameResult;
+    }
+    var customerTelResult = validateTelephone("customerTel");
+    if (customerTelResult != "") {
+        return customerTelResult;
+    }
+    var addressResult = validateCusAddress("address");
+    if (addressResult != "") {
+        return addressResult;
+    }
+    var areaResult = validateArea("provinceNum", "cityNum", "countyNum", "area");
+    if (areaResult != "") {
+        return areaResult;
+    }
+    return "";
+}
+
+//增票人姓名
+function validateUsername(id) {
+    var username = $("#"+id);
+    replaceBracketsByJquertObject(username);
+    if(username.val()==null || username.val()==""){
+        changeValidateStatusForIvcLand(false, id, "请填写收票人姓名");
+        result = "请填写收票人姓名";
+        return result;
+    }else if (checkLength(username.val())>20) {
+        changeValidateStatusForIvcLand(false, id, "收票人姓名过长，请重新输入");
+        result = "收票人姓名过长，请重新输入";
+        return result;
+    }else if (stripscript(username.val())){
+        changeValidateStatusForIvcLand(false, id, "收票人含有特殊字符，请重新输入");
+        result = "收票人含有特殊字符，请重新输入";
+        return result;
+    }else if (hasEmoji(username.val())){
+        changeValidateStatusForIvcLand(false, id, "收票人含有表情符号，请重新输入");
+        result = "收票人含有表情符号，请重新输入";
+        return result;
+    }else {
+        changeValidateStatusForIvcLand(true, id, "");
+    }
+    return "";
+}
+
+//收票人联系方式
+function validateTelephone(id) {
+    var telephone = $("#"+id);
+    replaceBracketsByJquertObject(telephone);
+    var re = /^1{1}[3,4,5,6,7,8,9]{1}\d{9}$/; // 判断是否为数字的正则表达式
+    if(telephone.val()==null || telephone.val()==""){
+        changeValidateStatusForIvcLand(false, id, "请填写收票人手机号");
+        result = "请填写收票人手机号";
+        return result;
+    }else if (!(re.test(telephone.val()) || /^\d{3}\*\*\*\*\d{4}$/.test(telephone.val()))){
+        changeValidateStatusForIvcLand(false, id, "收票人手机号格式不正确，请重新输入");
+        result = "收票人手机号格式不正确，请重新输入";
+        return result;
+    }else if (checkLength(telephone.val())>20) {
+        changeValidateStatusForIvcLand(false, id, "收票人手机号过长，请重新输入");
+        result = "收票人手机号过长，请重新输入";
+        return result;
+    }else if (stripscriptForTel(telephone.val())){
+        changeValidateStatusForIvcLand(false, id, "收票人手机号含有特殊字符，请重新输入");
+        result = "收票人手机号含有特殊字符，请重新输入";
+        return result;
+    } else {
+        changeValidateStatusForIvcLand(true, id, "");
+    }
+    return "";
+}
+
+//收票人地址
+function validateCusAddress(id) {
+    var address = $("#"+id);
+    replaceBracketsByJquertObject(address);
+    if(address.val()==null || address.val()==""){
+        changeValidateStatusForIvcLand(false, id, "请填写详细地址");
+        result = "请填写详细地址";
+        return result;
+    }else if (checkLength(address.val())>60) {
+        changeValidateStatusForIvcLand(false, id, "详细地址过长，请重新输入");
+        result = "详细地址过长，请重新输入";
+        return result;
+    }else if (stripscript(address.val())) {
+        changeValidateStatusForIvcLand(false, id, "详细地址含有特殊字符，请重新输入");
+        result = "详细地址含有特殊字符，请重新输入";
+        return result;
+    }else if (hasEmoji(address.val())) {
+        changeValidateStatusForIvcLand(false, id, "详细地址含有表情符号，请重新输入");
+        result = "详细地址含有表情符号，请重新输入";
+        return result;
+    }else if (hasNull(address.val())) {
+        changeValidateStatusForIvcLand(false, id, "收票地址有误，请重新输入");
+        result = "收票地址有误，请重新输入";
+        return result;
+    }else {
+        changeValidateStatusForIvcLand(true, id, "");
+    }
+    return "";
+}
+
+//收票人地区
+function validateArea(province, city, county, error) {
+    var provinceNode = $("#"+province);
+    var cityNode = $("#"+city);
+    var countyNode = $("#"+county);
+    if(!provinceNode.is(":hidden") && (provinceNode.val()=="" || provinceNode.val() == null || provinceNode.val() == undefined || provinceNode.val() == "null")){
+        $("#" + error + "-error").show();
+        $("#" + error + "-msg").html("请填写完整收票人地区");
+        result = "请填写完整收票人地区";
+        return result;
+    }else if (!cityNode.is(":hidden") && (cityNode.val()=="" || cityNode.val() == null || cityNode.val() == undefined || cityNode.val() == "null")) {
+        $("#" + error + "-error").show();
+        $("#" + error + "-msg").html("请填写完整收票人地区");
+        result = "请填写完整收票人地区";
+        return result;
+    }else if (!countyNode.is(":hidden") && (countyNode.val()=="" || countyNode.val() == null || countyNode.val() == undefined || countyNode.val() == "null")){
+        $("#" + error + "-error").show();
+        $("#" + error + "-msg").html("请填写完整收票人地区");
+        result = "请填写完整收票人地区";
+        return result;
+    }else {
+        $("#" + error + "-error").hide();
+        $("#" + error + "-msg").html("");
+    }
+    return "";
+}
+
+//客户税号
+function validateCusTaxNo(id) {
+    var taxNo = $("#"+id);
+    replaceBracketsByJquertObject(taxNo);
+    taxNo.val(taxNo.val().toLocaleUpperCase());
+    var reg_number=/(^([0-9A-Z]{15})|([0-9]{6}[0-9A-Z]{10,12})|([A-Z][0-9]{6}[0-9A-Z]{9,11})|([A-Z]{2}[0-9]{6}[0-9A-Z]{8,10})|([0-9]{14}[0-9X][0-9A-Z]{4,5})|([0-9]{17}[0-9X][0-9A-Z]{1,2})|([A-Z][0-9]{14}[0-9X][0-9A-Z]{3,4})|([A-Z][0-9]{17}[0-9X][0-9A-Z]{0,1})|([0-9]{6}[0-9A-Z]{14})$)/;
+    if(taxNo.val()==null || taxNo.val()==''){
+        changeValidateStatusForIvcLand(false, id, "请填写发票税号");
+        result = "请填写发票税号";
+        return result;
+    }else if(!reg_number.test(taxNo.val())) {
+        changeValidateStatusForIvcLand(false, id, "税号为10到20位数字字母组合，请检查");
+        result = "税号为10到20位数字字母组合，请检查";
+        return result;
+    }else if(checkUrl(taxNo.val())){
+        changeValidateStatusForIvcLand(false, id, "税号包含特殊字符，请检查");
+        result = "税号包含特殊字符，请检查";
+        return result;
+    }else {
+        changeValidateStatusForIvcLand(true, id, "");
+    }
+    return "";
+}
+//客户税号
+function validateCusTaxNoAndCanNull(id,isCanNull) {
+    var taxNo = $("#"+id);
+    replaceBracketsByJquertObject(taxNo);
+    taxNo.val(taxNo.val().toLocaleUpperCase());
+    var reg_number=/(^([0-9A-Z]{15})|([0-9]{6}[0-9A-Z]{10,12})|([A-Z][0-9]{6}[0-9A-Z]{9,11})|([A-Z]{2}[0-9]{6}[0-9A-Z]{8,10})|([0-9]{14}[0-9X][0-9A-Z]{4,5})|([0-9]{17}[0-9X][0-9A-Z]{1,2})|([A-Z][0-9]{14}[0-9X][0-9A-Z]{3,4})|([A-Z][0-9]{17}[0-9X][0-9A-Z]{0,1})|([0-9]{6}[0-9A-Z]{14})$)/;
+    if(!isCanNull&&(taxNo.val()==null || taxNo.val()=='')){
+        changeValidateStatusForIvcLand(false, id, "请填写发票税号");
+        result = "请填写发票税号";
+        return result;
+    }if(isCanNull&&(taxNo.val()==null || taxNo.val()=='')){//如果允许为空，并且税号为空 则直接返回
+        return "";
+    }else if(!reg_number.test(taxNo.val())) {
+        changeValidateStatusForIvcLand(false, id, "税号为10到20位数字字母组合，请检查");
+        result = "税号为10到20位数字字母组合，请检查";
+        return result;
+    }else if(checkUrl(taxNo.val())){
+        changeValidateStatusForIvcLand(false, id, "税号包含特殊字符，请检查");
+        result = "税号包含特殊字符，请检查";
+        return result;
+    }else {
+        changeValidateStatusForIvcLand(true, id, "");
+    }
+    return "";
+}
+
+//注册地址
+function validateRegistAddress(id) {
+    var address = $("#"+id);
+    if(address.val()=='' || address.val()==null){
+        changeValidateStatusForIvcLand(true, id, "");
+        return "";
+    }
+    address.val(address.val().replace(/\s+/g, ""));
+    replaceBracketsByJquertObject(address);
+    if (address.val().replace(/[^\x00-\xff]/g, "**").length < 2) {
+        changeValidateStatusForIvcLand(false, id, "注册地址错误");
+        return "注册地址错误";
+    }else if (checkLength(address.val()) >80) {
+        changeValidateStatusForIvcLand(false, id, "注册地址过长，请重新输入");
+        result = "注册地址过长，请重新输入";
+        return result;
+    }else if(!(/.*[\u4e00-\u9fa5]+.*$/.test(address.val()))){
+        changeValidateStatusForIvcLand(false, id, "注册地址必须包含汉字，请重新输入");
+        result = "注册地址必须包含汉字，请重新输入";
+        return result;
+    }else if (stripscript(address.val())) {
+        changeValidateStatusForIvcLand(false, id, "注册地址含有特殊字符，请重新输入");
+        result = "注册地址含有特殊字符，请重新输入";
+        return result;
+    }else if (hasEmoji(address.val())) {
+        changeValidateStatusForIvcLand(false, id, "注册地址含有表情符号，请重新输入");
+        result = "注册地址含有表情符号，请重新输入";
+        return result;
+    } else {
+        changeValidateStatusForIvcLand(true, id, "");
+    }
+    return "";
+}
+
+//注册电话
+function validatePhone(id) {
+    var phone = $("#"+id);
+    if(phone.val()=='' || phone.val()==null){
+        changeValidateStatusForIvcLand(true, id, "");
+        return "";
+    }
+    replaceBracketsByJquertObject(phone);
+    var reg_phone=/^\d[\d\-]*$/;
+    if (checkLength(phone.val())>20) {
+        changeValidateStatusForIvcLand(false, id, "电话号码过长，请重新输入");
+        result = "电话号码过长，请重新输入";
+        return result;
+    }else if (stripscript(phone.val())){
+        changeValidateStatusForIvcLand(false, id, "注册电话含有特殊字符，请重新输入");
+        result = "含有特殊字符，请重新输入";
+        return result;
+    }else if(!reg_phone.test(phone.val())){
+        changeValidateStatusForIvcLand(false, id, "注册电话格式输入有误，请重新输入");
+        result = "注册电话格式输入有误，请重新输入";
+        return result;
+    }else if(checkUrl(phone.val())){
+        changeValidateStatusForIvcLand(false, id, "注册电话包含特殊字符，请重新输入");
+        result = "注册电话包含特殊字符，请重新输入";
+        return result;
+    } else {
+        changeValidateStatusForIvcLand(true, id, "");
+    }
+    return "";
+}
+
+//开户银行
+function validateBank(id) {
+    var bank = $("#"+id);
+    if(bank.val()=='' || bank.val()==null){
+        changeValidateStatusForIvcLand(true, id, "");
+        return "";
+    }
+    replaceBracketsByJquertObject(bank);
+    if (bank.val().replace(/[^\x00-\xff]/g, "**").length < 2) {
+        changeValidateStatusForIvcLand(false, id, "开户银行错误，请重新输入");
+        result = "开户银行错误，请重新输入";
+        return result;
+    }else if (checkLength(bank.val()) >100) {
+        changeValidateStatusForIvcLand(false, id, "开户银行过长，请重新输入");
+        result = "开户银行过长，请重新输入";
+        return result;
+    }else if (stripscript(bank.val())){
+        changeValidateStatusForIvcLand(false, id, "开户银行含有特殊字符，请重新输入");
+        result = "开户银行含有特殊字符，请重新输入";
+        return result;
+    } else if(!(/.*[\u4e00-\u9fa5]+.*$/.test(bank.val()))){
+        changeValidateStatusForIvcLand(false, id, "开户银行必须包含汉字，请重新输入");
+        result = "开户银行必须包含汉字，请重新输入";
+        return result;
+    }else if(checkUrl(bank.val())){
+        changeValidateStatusForIvcLand(false, id, "开户银行含有特殊字符，请重新输入");
+        result = "开户银行含有特殊字符，请重新输入";
+        return result;
+    }else if(hasEmoji(bank.val())){
+        changeValidateStatusForIvcLand(false, id, "开户银行含有表情符号，请重新输入");
+        result = "开户银行含有表情符号，请重新输入";
+        return result;
+    }else {
+        changeValidateStatusForIvcLand(true, id, "");
+    }
+    return "";
+}
+
+//银行账号
+function validateAccount(id) {
+    var account = $("#"+id);
+    if(account.val()=='' || account.val()==null){
+        changeValidateStatusForIvcLand(true, id, "");
+        return "";
+    }
+    replaceBracketsByJquertObject(account);
+    var reg_number=/^[0-9-]*$/;
+    if (checkLength(account.val()) < 5) {
+        changeValidateStatusForIvcLand(false, id, "银行账号长度过短，请重新输入");
+        result = "银行账号长度过短，请重新输入";
+        return result;
+    }else if (checkLength(account.val()) >40) {
+        changeValidateStatusForIvcLand(false, id, "银行账号总长度不能超过40个字");
+        result = "银行账号总长度不能超过40个字";
+        return result;
+    }else if (!reg_number.test(account.val())){
+        changeValidateStatusForIvcLand(false, id, "银行账号只能输入数字，请重新输入");
+        result = "银行账号只能输入数字，请重新输入";
+        return result;
+    }else if (stripscript(account.val())){
+        changeValidateStatusForIvcLand(false, id, "银行账号含有特殊字符，请重新输入");
+        result = "银行账号含有特殊字符，请重新输入";
+        return result;
+    }else if(checkUrl(account.val())){
+        changeValidateStatusForIvcLand(false, id, "银行账号含有特殊字符，请重新输入");
+        result = "银行账号含有特殊字符，请重新输入";
+        return result;
+    }else {
+        changeValidateStatusForIvcLand(true, id, "");
+    }
+    return "";
+}
+
+//个人抬头
+function validatePersonName(id,name) {
+    var address = $("#"+id);
+    replaceBracketsByJquertObject(address);
+    if(address.val()==null || address.val()==""){
+        changeValidateStatusForIvcLand(true, id, "");
+        return "";
+    }else if (checkLength(address.val())>100) {
+        changeValidateStatusForIvcLand(false, id, name+"过长，请重新输入");
+        result = name+"过长，请重新输入";
+        return result;
+    }else if (stripscript(address.val())) {
+        changeValidateStatusForIvcLand(false, id, name+"含有特殊字符，请重新输入");
+        result = name+"含有特殊字符，请重新输入";
+        return result;
+    }else if (hasEmoji(address.val())) {
+        changeValidateStatusForIvcLand(false, id, name+"含有表情符号，请重新输入");
+        result = name+"含有表情符号，请重新输入";
+        return result;
+    }else {
+        changeValidateStatusForIvcLand(true, id, "");
+    }
+    return "";
+}
+
+//公司名称
+function validateCompanyName(id,name) {
+    var address = $("#"+id);
+    replaceBracketsByJquertObject(address);
+    if(address.val()==null || address.val()==""){
+        changeValidateStatusForIvcLand(false, id, "请填写"+name);
+        result = "请填写"+name;
+        return result;
+    }else if (checkLength(address.val())>100) {
+        changeValidateStatusForIvcLand(false, id, name+"过长，请重新输入");
+        result = name+"过长，请重新输入";
+        return result;
+    }else if (stripscript(address.val())) {
+        changeValidateStatusForIvcLand(false, id, name+"含有特殊字符，请重新输入");
+        result = name+"含有特殊字符，请重新输入";
+        return result;
+    }else if (hasEmoji(address.val())) {
+        changeValidateStatusForIvcLand(false, id, name+"含有表情符号，请重新输入");
+        result = name+"含有表情符号，请重新输入";
+        return result;
+    }else {
+        changeValidateStatusForIvcLand(true, id, "");
+    }
+    return "";
+}
+
+//验证电子票邮箱
+function validateEmail(id) {
+    var email = $("#"+id);
+    replaceBracketsByJquertObject(email);
+    var re = /^[A-Za-z\d]+([-_.][A-Za-z\d]+)*@([A-Za-z\d]+[-.])+[A-Za-z\d]{2,4}$/ ; // 判断是否为邮箱的正则表达式
+    if(email.val()==null || email.val()==""){
+        changeValidateStatusForIvcLand(true, id, "");
+        return "";
+    }else if (!(re.test(email.val()))){
+        changeValidateStatusForIvcLand(false, id, "邮箱格式不正确，请重新输入");
+        result = "邮箱格式不正确，请重新输入";
+        return result;
+    }else if (checkLength(email.val())>100) {
+        changeValidateStatusForIvcLand(false, id, "邮箱过长，请重新输入");
+        result = "邮箱过长，请重新输入";
+        return result;
+    }else if (stripscriptForEmail(email.val())) {
+        changeValidateStatusForIvcLand(false, id, "邮箱含有特殊字符，请重新输入");
+        result = "邮箱含有特殊字符，请重新输入";
+        return result;
+    }else {
+        changeValidateStatusForIvcLand(true, id, "");
+    }
+    return "";
+}
+
+//统一方法，修改input状态
+function changeValidateStatus(status, id, msg) {
+    if(status) {
+        $("#" + id+"Div").attr("class","f-item");
+        $("#" + id + "Tip").hide();
+        $("#" + id + "Tip").find(".tip-text").text("");
+    } else {
+        $("#" + id+"Div").attr("class","f-item z-inp-error");
+        $("#" + id + "Tip").show();
+        $("#" + id + "Tip").find(".tip-text").text(msg);
+    }
+}
+
+
+//统一方法，修改input状态
+function changeValidateStatusForIvcLand(status, id, msg) {
+    if(status) {
+        $("#" + id).attr("class","itxt");
+        $("#" + id + "Tip").hide();
+        $("#" + id + "Tip").text("");
+    } else {
+        $("#" + id).attr("class","itxt itxt-error");
+        $("#" + id + "Tip").show();
+        $("#" + id + "Tip").text(msg);
+    }
+}
+
+function loadTitleAndTaxNo(titleType){
+    var ivcTitleType;
+    if (titleType == 4) {
+        ivcTitleType = $("#ivcTitleTypeAll").val();
+    }else {
+        ivcTitleType = $("#ivcTitleTypeCompany").val();
+    }
+    if(ivcTitleType=='个人'){
+        $("#ivcTitleDiv").css("display","block");
+        $("#companyNameDiv").css("display","none");
+        $("#taxNoDiv").css("display","none");
+        $("#eiRegistAddressDiv").css("display","none");
+        $("#eiRegistPhoneDiv").css("display","none");
+        $("#eiBankDiv").css("display","none");
+        $("#eiBankAccountDiv").css("display","none");
+    }else{
+        $("#ivcTitleDiv").css("display","none");
+        $("#companyNameDiv").css("display","block");
+        $("#taxNoDiv").css("display","block");
+        $("#eiRegistAddressDiv").css("display","block");
+        $("#eiRegistPhoneDiv").css("display","block");
+        $("#eiBankDiv").css("display","block");
+        $("#eiBankAccountDiv").css("display","block");
+    }
+    loadStatementInfo();
+}
+
+function changePopIvcType(){
+    var ivcType = $("#ivcType").val();
+    if (ivcType == 3) {
+        $("#ivcTitleTypeDivAll").css("display", "block");
+        $("#ivcTitleTypeDivCompany").css("display", "none");
+
+        $("#customerNameDiv").css("display", "none");
+        $("#customerTelDiv").css("display", "none");
+        $("#areaDiv").css("display", "none");
+        $("#addressDiv").css("display", "none");
+        $("#customerTelEDiv").css("display", "block");
+        $("#emailDiv").css("display", "block");
+    } else if (ivcType == 2) {
+        $("#ivcTitleTypeDivAll").css("display", "none");
+        $("#ivcTitleTypeDivCompany").css("display", "block");
+
+        $("#ivcTitleDiv").css("display", "none");
+        $("#companyNameDiv").css("display", "block");
+        $("#taxNoDiv").css("display", "block");
+        $("#eiRegistAddressDiv").css("display", "block");
+        $("#eiRegistPhoneDiv").css("display", "block");
+        $("#eiBankDiv").css("display", "block");
+        $("#eiBankAccountDiv").css("display", "block");
+        $("#customerNameDiv").css("display", "block");
+        $("#customerTelDiv").css("display", "block");
+        $("#areaDiv").css("display", "block");
+        $("#addressDiv").css("display", "block");
+        $("#customerTelEDiv").css("display", "none");
+        $("#emailDiv").css("display", "none");
+    } else {
+        $("#ivcTitleTypeDivAll").css("display", "block");
+        $("#ivcTitleTypeDivCompany").css("display", "none");
+
+        $("#customerNameDiv").css("display", "block");
+        $("#customerTelDiv").css("display", "block");
+        $("#areaDiv").css("display", "block");
+        $("#addressDiv").css("display", "block");
+        $("#customerTelEDiv").css("display", "none");
+        $("#emailDiv").css("display", "none");
+    }
+}
+
+function loadStatementInfo() {
+    var ivcTitleType = $("#ivcTitleType").val();
+    var showUserStatement = $("#showUserStatement").val();
+    if (ivcTitleType == "单位" && showUserStatement == "true") {
+        $("#statementInfo").css("display","block");
+    } else {
+        $("#statementInfo").css("display","none");
+    }
+}

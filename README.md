@@ -75,4 +75,77 @@ python main.py \
 
 ## 环境依赖
 
-本工具仅依赖 Python 标准库（`xml.etree.ElementTree`、`csv` 等），不需要额外安装第三方库。
+本工具主体仅依赖 Python 标准库（`xml.etree.ElementTree`、`csv` 等）。
+
+如果你需要使用自动抓取京东发票 XML 的脚本，还需要安装：
+
+```bash
+pip install -r requirements.txt
+```
+
+当前 `requirements.txt` 中主要包含：
+
+- `selenium`：用于驱动浏览器自动化（抓取发票 XML）
+
+---
+
+## 附加脚本：京东发票 XML 自动抓取
+
+在本目录下新增了 `jd_invoice_downloader.py`，用于**自动登录京东发票服务中心并下载 180 天内可换开订单的 XML 发票**。
+
+### 核心功能
+
+1. 使用 Selenium 启动 Chrome 浏览器（支持无头模式）。
+2. 打开 `https://myivc.jd.com/fpzz/index.action`：
+   - 如果已登录，则直接进入发票服务中心列表页面；
+   - 如果未登录：
+     - 非无头模式：弹出浏览器窗口，让你手动登录（扫码或密码）;
+     - 无头模式：将登录页截图（包含二维码）保存为本地图片，让你在本机查看并扫码登录。
+3. 登录成功后，在**“我的发票”**页面分页遍历订单列表：
+   - 只处理**下单日期在指定天数范围内（默认 180 天）**的订单；
+   - 若某条订单存在“换开申请”按钮，则点击该条订单的**“发票详情”**（不点“换开申请”），进入**发票详情页**；
+   - 在发票详情页的“下载电子专用发票”区域点击**“查看XML”**，将 XML 下载到指定目录（默认 `./xml-input`）。
+4. 当遇到订单日期早于指定天数范围时，停止继续翻页。
+
+页面与选择器依据：`html_source_example` 文件夹中的 **“我的京东--我的发票.html”**（订单条目、换开申请、发票详情按钮）和 **“我的京东-发票详情.html”**（查看XML 按钮）。若京东改版导致定位失败，可根据实际页面调整脚本中的选择器。
+
+### 使用方式
+
+1. 安装依赖（确保已安装 Chrome/Chromium 及对应的 ChromeDriver，并加入 `PATH`）：
+
+```bash
+pip install -r requirements.txt
+```
+
+2. 在本项目根目录下运行抓取脚本，例如：
+
+```bash
+python jd_invoice_downloader.py
+```
+
+等价于：
+
+```bash
+python jd_invoice_downloader.py \
+  --output-dir ./xml-input \
+  --days 180
+```
+
+常用参数说明：
+
+- `-o, --output-dir`：XML 发票下载目录，默认 `./xml-input`
+- `--days`：回溯的天数范围，默认 `180`
+- `--headless`：启用无头浏览器模式（在服务器或无 GUI 环境推荐开启）
+- `--qr-screenshot`：无头模式下保存登录二维码截图的文件名，默认 `jd_login_qr.png`
+- `--driver-path`：可选，用于显式指定 ChromeDriver 可执行文件路径
+
+抓取完成后，你可以直接运行 `main.py` 将下载好的 XML 发票继续转换为汇总 CSV。
+
+### Linux / WSL 下 chromedriver 退出码 127
+
+若报错 `chromedriver unexpectedly exited. Status code was: 127`，多为当前环境缺少 Chrome/Chromium 或 chromedriver 依赖的动态库。请先安装浏览器及依赖再运行脚本：
+
+- **Ubuntu / Debian**（推荐先装 Chromium）：`sudo apt-get update && sudo apt-get install -y chromium-browser`
+- 若已装 Google Chrome 仍报 127，可再安装：`sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2`
+- 查看缺失库：`ldd ~/.wdm/drivers/chromedriver/linux64/*/chromedriver`，根据 “not found” 安装对应包。
+- Docker/Alpine：需使用带 glibc 的镜像并安装 chromium。

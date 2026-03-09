@@ -1,0 +1,197 @@
+/**
+ * Created by wangyao7 on 2016/4/21.
+ */
+function bkfpReqForIvcLand(orderId,ivcType,ivcTitle,passKey,tagStr){
+    var datas = "";
+    datas += "orderId="+ orderId + "&";
+    datas += "ivcType="+ ivcType + "&";
+    datas += "ivcTitle="+ encodeURIComponent(encodeURIComponent(ivcTitle)) + "&";
+    datas += "passKey="+ passKey + "&";
+    datas += "ivcLandSource=1&";
+
+    jQuery.ajax({
+        type: "POST",
+        async: false,
+        url: "/fpzz/bkfpCheck.action",
+        data:datas,
+        dataType: "json",
+        success: function(data){
+            if (data.result == "invalid") {
+                var baseHtml = $("#warning").html();
+                $('body').dialog({
+                    title:null,
+                    width:520,
+                    type:'text',
+                    source: baseHtml.replace('$message$',data.message),
+                    hasButton : true,
+                    cancelButton:'确定',
+                    submitButton : null
+                });
+            }else if(data.result == "success"){
+                console.log(data)
+                window.open("/fpzz/bkfpReqForIvcCenter.action?tagStr="+ tagStr + "&reqInfo="+data.reqInfo);
+            }else{
+                var baseHtml = $("#warning").html();
+                $('body').dialog({
+                    title:null,
+                    width:520,
+                    type:'text',
+                    source: baseHtml.replace('$message$',"服务器忙，请稍后重试！"),
+                    hasButton : true,
+                    cancelButton:'确定',
+                    submitButton : null
+                });
+            }
+        },
+        error : function(data){
+            /*       		alert("服务器忙，请稍后重试！");  */
+        }
+    });
+}
+
+
+function hkfpReqForIvcLand(orderId,ivcType,ivcTitle,passKey,tagStr){
+    var datas = "";
+    datas += "orderId="+ orderId + "&";
+    datas += "ivcType="+ ivcType + "&";
+    datas += "originalIvcType="+ ivcType + "&";
+    datas += "ivcTitle="+ encodeURIComponent(encodeURIComponent(ivcTitle)) + "&";
+    datas += "passKey="+ passKey + "&";
+    datas += "ivcLandSource=1&";
+
+    $.ajax({
+        type: "POST",
+        async: false,
+        url: "/fpzz/hkfpCheck.action",
+        data:datas,
+        dataType: "json",
+        success: function(data){
+            if (data.result == "invalid") {
+                var baseHtml = $("#warning").html();
+                $('body').dialog({
+                    title:null,
+                    width:520,
+                    type:'text',
+                    source: baseHtml.replace('$message$',data.message),
+                    hasButton : true,
+                    cancelButton:'确定',
+                    submitButton : null
+                });
+            }else if(data.result == "success"){
+                console.log(data)
+                window.open("/fpzz/hkfpReqForIvcCenter.action?tagStr="+ tagStr + "&reqInfo="+data.reqInfo);
+            }else{
+                var baseHtml = $("#warning").html();
+                $('body').dialog({
+                    title:null,
+                    width:520,
+                    type:'text',
+                    source: baseHtml.replace('$message$',"服务器忙，请稍后重试！"),
+                    hasButton : true,
+                    cancelButton:'确定',
+                    submitButton : null
+                });
+            }
+        },
+        error : function(data){
+            /*       		alert("服务器忙，请稍后重试！");  */
+        }
+    });
+}
+
+function pophkfpReqForIvcLand(orderId,ivcType,ivcTitle,passKey,tagStr,venderId,canVenderInvoice){
+    var datas = "";
+    datas += "orderId="+ orderId + "&";
+    datas += "ivcType="+ ivcType + "&";
+    datas += "originalIvcType="+ ivcType + "&";
+    datas += "ivcTitle="+ encodeURIComponent(encodeURIComponent(ivcTitle)) + "&";
+    datas += "passKey="+ passKey + "&";
+    datas += "ivcLandSource=1&";
+    datas += "venderId="+venderId+"&";
+    datas += "canVenderInvoice="+canVenderInvoice+"&";
+
+    $.ajax({
+        type: "POST",
+        async: false,
+        url: "/popFpzz/popExchangeInvoiceReqCheck.action",
+        data:datas,
+        dataType: "json",
+        success: function(data){
+            if (data.result == "invalid") {
+                var baseHtml = $("#warning").html();
+                $('body').dialog({
+                    title:null,
+                    width:520,
+                    type:'text',
+                    source: baseHtml.replace('$message$',data.message),
+                    hasButton : true,
+                    cancelButton:'确定',
+                    submitButton : null
+                });
+            }else if(data.result == "success"){
+                console.log(data)
+                window.open("/popFpzz/popHkfpReqForIvcCenter.action?tagStr="+ tagStr + "&reqInfo="+data.reqInfo);
+            }else{
+                var baseHtml = $("#warning").html();
+                $('body').dialog({
+                    title:null,
+                    width:520,
+                    type:'text',
+                    source: baseHtml.replace('$message$',"服务器忙，请稍后重试！"),
+                    hasButton : true,
+                    cancelButton:'确定',
+                    submitButton : null
+                });
+            }
+        },
+        error : function(data){
+            /*       		alert("服务器忙，请稍后重试！");  */
+        }
+    });
+}
+
+function popInvoiceReqForIvcLand(orderId,venderId,passKey,canVenderInvoice,tagStr){
+
+    var datas = "";
+    datas += "orderId="+ orderId + "&";
+    datas += "venderId="+ venderId + "&";
+    datas += "canVenderInvoice="+ canVenderInvoice + "&";
+    datas += "passKey="+ passKey + "&";
+    $.ajax({
+        type: "POST",
+        async: false,
+        url: "/popFpzz/popInvoiceReqCheck.action",
+        data:datas,
+        dataType: "json",
+        success: function(data){
+            if (data.result == "invalid") {
+                var baseHtml = $("#warning").html();
+                $('body').dialog({
+                    title:null,
+                    width:520,
+                    type:'text',
+                    source: baseHtml.replace('$message$',data.message),
+                    hasButton : true,
+                    cancelButton:'确定',
+                    submitButton : null
+                });
+            }else if(data.result == "success"){
+                window.open("/popFpzz/popInvoiceReq.action?orderId="+orderId+"&venderId="+venderId+"&canVenderInvoice="+canVenderInvoice+"&ivcLandSource=1&tagStr="+tagStr );
+            }else{
+                var baseHtml = $("#warning").html();
+                $('body').dialog({
+                    title:null,
+                    width:520,
+                    type:'text',
+                    source: baseHtml.replace('$message$',"服务器忙，请稍后重试！"),
+                    hasButton : true,
+                    cancelButton:'确定',
+                    submitButton : null
+                });
+            }
+        },
+        error : function(data){
+            /*       		alert("服务器忙，请稍后重试！");  */
+        }
+    });
+}

@@ -1,0 +1,419 @@
+
+
+$(function(){
+	// $("#div_process").show();
+
+	reloadQrCode();
+	//电票邮箱
+
+});
+
+//TODO PC端 展示邮寄信息
+function getDeliveryForIvcLandAsync(ivcType){
+	$.ajax({
+		url:"/fpzz/getDeliveryForIvcLandAsync.action",
+		type: "POST",
+		async: true,
+		data:"orderId="+$("#orderId").val(),
+		dataType: "json",
+		success:function(data){
+			if(data.result=='success'){
+				console.log(data.postCompany+"\n"+data.postCompanyDiv+"\n"+data.deliveryDetailDiv);
+				var postCompany=data.postCompany;
+				if (postCompany!=null&&postCompany!=''){
+					//收票信息 展示邮寄信息  运单号
+					$("#invoiceAddressDivForAsync").append(data.postCompanyDiv);
+					//进度条 展示 已邮寄
+					$("#orderFinishVatStatusDivForPostAsync_process").removeClass("wait").addClass("ready");
+					$("#orderFinishVatStatusDivForPostAsync_process").removeClass("doing").addClass("ready");
+					$("#orderFinishVatStatusDivForPostAsync_target").removeClass("wait").addClass("ready");
+				}
+				var deliveryDetailDiv=data.deliveryDetailDiv;
+				if (deliveryDetailDiv!=null&&deliveryDetailDiv!=""){
+					$("#detail_deliveryDetailDivForAsync").append(deliveryDetailDiv);
+					// 数电专票不展示发票跟踪
+					if(ivcType != 24) {
+						$("#deliveryDetailDivForAsync").css("display","");
+					}else {
+						$("#deliveryDetailDivForAsync").css("display","none");
+					}
+				}
+			}else {
+				console.log("postInfoGetError");
+			}
+		}
+	});
+}
+function getCanBHKForIvcLandAsync(){
+	$.ajax({
+		url:"/fpzz/getCanBHKForIvcLandAsync.action",
+		type: "POST",
+		async: true,
+		data:"orderId="+$("#orderId").val(),
+		dataType: "json",
+		success:function(data){
+			if(data.result=='success'){
+				// console.log(data.bhkButtonDiv);
+				var bhkButtonDiv=data.bhkButtonDiv;
+				if (bhkButtonDiv!=null&&bhkButtonDiv!=''){
+					//按钮追加 补换开
+					$("#buttomDivForAsync").append(bhkButtonDiv);
+					//按钮展示
+					$("#buttomDivForAsync").show();
+				}
+			}else {
+				console.log("CanBHKGetError");
+			}
+		}
+	});
+}
+
+function getPopJiuFenForIvcLandAsync(){
+	$.ajax({
+		url:"/fpzz/getPopJiuFenForIvcLandAsync.action",
+		type: "POST",
+		async: true,
+		data:"orderId="+$("#orderId").val(),
+		dataType: "json",
+		success:function(data){
+			if(data.result=='success'){
+				// console.log(data.bhkButtonDiv);
+				var buttonDiv=data.popRefereeButtonStr;
+				if (buttonDiv!=null&&buttonDiv!=''){
+					//按钮追加 补换开
+					$("#buttomDivForAsync").append(buttonDiv);
+					//按钮展示
+					$("#buttomDivForAsync").show();
+				}
+			}else {
+				console.log("jiuFenGetError");
+			}
+		}
+	});
+}
+
+function getUserEmailForIvcLandAsync() {
+	$.ajax({
+		url:"/fpzz/getUserEmail.action",
+		type: "POST",
+		async: false,
+		dataType: "json",
+		success:function(data){
+			if(data.result=='success'){
+				$("#einvoiceSendEmail").val(data.email);
+			}else {
+				$("#einvoiceSendEmail").attr("placeholder","（用来接收电子发票邮件）");
+			}
+		}
+	});
+}
+
+function reloadQrCode(){
+	var url = $("#qrCode").val();
+	// console.log("QrCode:"+url);
+	if(url != null && url != ''){
+		$.ajax({
+			url: url,
+			dataType:'jsonp',
+			data:'',
+			jsonp:'callback',
+			success:function(result) {
+				if(result.success){
+					$("#scanQrCode").show();
+					$("#scanQrCode").attr("src", "data:image/png;base64,"+result.message);
+				}else{
+					$("#scanQrCode").hide();
+					console.log("reloadQrCode:"+result);
+				}
+			},
+			timeout:3000
+		});
+	}
+}
+
+//修改发票链接
+function openOrderModify(orderId,typeName){
+	window.location.href = "/fpzz/"+typeName+".action?orderId="+orderId;
+}
+//pop修改发票链接
+function openPopOrderModify(orderId,venderId,typeName){
+	window.location.href = "/popFpzz/"+typeName+".action?orderId="+orderId+"&venderId="+venderId;
+}
+
+function bkfpReq(orderId,ivcType,ivcTitle,passKey){
+	var datas = "";
+	datas += "orderId="+ orderId + "&";
+	datas += "ivcType="+ ivcType + "&";
+	datas += "ivcTitle="+ encodeURIComponent(encodeURIComponent(ivcTitle)) + "&";
+	datas += "passKey="+ passKey + "&";
+	datas += "ivcLandSource=1&";
+
+	$.ajax({
+		type: "POST",
+		async: false,
+		url: "/fpzz/bkfpCheck.action",
+		data:datas,
+		dataType: "json",
+		success: function(data){
+			if (data.result == "invalid") {
+				popMsg(data.message);
+			}else if(data.result == "success"){
+				console.log(data)
+				window.location.href = "/fpzz/bkfpReqForIvcCenter.action?tagStr="+$("#tagStr").val() + "&reqInfo="+data.reqInfo;
+			}else{
+				popMsg("服务器忙，请稍后重试！");
+			}
+		},
+		error : function(data){
+			/*       		alert("服务器忙，请稍后重试！");  */
+		}
+	});
+}
+
+function hkfpReq(orderId,ivcType,ivcTitle,passKey){
+	var datas = "";
+	datas += "orderId="+ orderId + "&";
+	datas += "ivcType="+ ivcType + "&";
+	datas += "originalIvcType="+ ivcType + "&";
+	datas += "ivcTitle="+ encodeURIComponent(encodeURIComponent(ivcTitle)) + "&";
+	datas += "passKey="+ passKey + "&";
+	datas += "ivcLandSource=1&";
+
+	$.ajax({
+		type: "POST",
+		async: false,
+		url: "/fpzz/hkfpCheck.action",
+		data:datas,
+		dataType: "json",
+		success: function(data){
+			if (data.result == "invalid") {
+				popMsg(data.message);
+			}else if(data.result == "success"){
+				console.log(data)
+				window.location.href = "/fpzz/hkfpReqForIvcCenter.action?tagStr="+$("#tagStr").val() + "&reqInfo="+data.reqInfo;
+			}else{
+				popMsg("服务器忙，请稍后重试！");
+			}
+		},
+		error : function(data){
+			/*       		alert("服务器忙，请稍后重试！");  */
+		}
+	});
+}
+//TODO
+function sendEinvoiceEmail(orderId,ivcType){
+	var email = $("#einvoiceSendEmail").val();
+	var validResult = validateEmail('einvoiceSendEmail');
+	if(validResult!=""){
+		$("#email_tip").show();
+		$("#email_tip").find("div").html(validResult);
+		// popMsg(validResult);
+	}else{
+		var data = "";
+		data += "orderId="+orderId+"&";
+		data += "email="+email+"&";
+        data += "ivcType="+ivcType+"&";
+        $.ajax({
+			url:"/fpzz/sendEinvoiceEmailAsync.action",
+			type: "POST",
+			data:data,
+			async: false,
+			dataType: "json",
+			success:function(data){
+				if(data.result=='success'){
+					closeDialog();
+					popMsg("发送邮箱成功，请注意查收。");
+					// closeDialog();
+				}else{
+					var errMsg="";
+					if(data.errorMsg == null || data.errorMsg === ''){
+						errMsg="服务器忙，请稍后重试！";
+					}else{
+						// closeDialog();
+						// popMsg(data.errorMsg);
+						errMsg=data.errorMsg;
+					}
+					$("#email_tip").show();
+					$("#email_tip").find("div").html(errMsg);
+				}
+			},
+			error : function(data){
+				$("#email_tip").show();
+				$("#email_tip").find("div").html("服务器忙，请稍后重试！");
+				// popMsg("服务器忙，请稍后重试！");
+			}
+		});
+	}
+}
+
+function popInvoiceReq(orderId,venderId,passKey,canVenderInvoice){
+	var datas = "";
+	datas += "orderId="+ orderId + "&";
+	datas += "venderId="+ venderId + "&";
+	datas += "canVenderInvoice="+ canVenderInvoice + "&";
+	datas += "passKey="+ passKey + "&";
+	$.ajax({
+		type: "POST",
+		async: false,
+		url: "/popFpzz/popInvoiceReqCheck.action",
+		data:datas,
+		dataType: "json",
+		success: function(data){
+			if (data.result == "invalid") {
+				popMsg(data.message);
+			}else if(data.result == "success"){
+				window.location.href="/popFpzz/popInvoiceReq.action?orderId="+orderId+"&venderId="+venderId+"&canVenderInvoice="+canVenderInvoice+"&ivcLandSource=1&tagStr="+$("#tagStr").val() ;
+			}else{
+				popMsg("服务器忙，请稍后重试！");
+			}
+		},
+		error : function(data){
+			/*       		alert("服务器忙，请稍后重试！");  */
+		}
+	});
+}
+
+function popExchangeInvoiceReq(orderId,venderId,passKey,canVenderInvoice,originalIvcType,ivcTitle){
+	var source = $("#source").val();
+	var datas = "";
+	datas += "orderId="+ orderId + "&";
+	datas += "venderId="+ venderId + "&";
+	datas += "canVenderInvoice="+ canVenderInvoice + "&";
+	datas += "passKey="+ passKey + "&";
+	datas += "originalIvcType="+ originalIvcType + "&";
+	datas += "ivcTitle="+ encodeURIComponent(encodeURIComponent(ivcTitle)) + "&";
+	$.ajax({
+		type: "POST",
+		async: false,
+		url: "/popFpzz/popExchangeInvoiceReqCheck.action",
+		data:datas,
+		dataType: "json",
+		success: function(data){
+			if (data.result == "invalid") {
+				popMsg(data.message);
+			}else if(data.result == "success"){
+				window.location.href=("/popFpzz/popHkfpReqForIvcCenter.action")+"?tagStr="+ $("#tagStr").val() + "&reqInfo="+data.reqInfo ;
+			}else{
+				popMsg("服务器忙，请稍后重试！");
+			}
+		},
+		error : function(data){
+			/*       		alert("服务器忙，请稍后重试！");  */
+		}
+	});
+}
+
+function popMsg(message){
+	var baseHtml = $("#msg_box").html();
+	seajs.use(['//misc.360buyimg.com/jdf/1.0.0/ui/dialog/1.0.0/dialog'], function () {
+		$('body').dialog({
+			title: "提示",
+			width: 380,
+			type: 'text',
+			extendMainClass: 'inv-thickbox-wrap',
+			source: baseHtml.replace('warnMessage', message),
+			mainId:'msg_box_div',
+			maskId:'msg_box_div_mask'
+
+		});
+	});
+}
+
+function closeDialog(){
+	$.closeDialog();
+}
+
+function closeDialogForId(id){
+	$("#"+id).remove();
+	$("#"+id+"_mask").remove();
+	// clearInterval(window.autoCloseTimerDialog);
+}
+//验证电子票邮箱
+function validateEmail(id) {
+	var email = $("#"+id);
+	replaceBracketsByJquertObject(email);
+	var re = /^[A-Za-z\d]+([-_.][A-Za-z\d]+)*@([A-Za-z\d]+[-.])+[A-Za-z\d]{2,4}$/; // 判断是否为邮箱的正则表达式
+	if(email.val()==null || email.val()==""){
+		return "邮箱为空，请重新输入";
+	}else if (!(re.test(email.val()))){
+		result = "邮箱格式不正确，请检查后重新输入";
+		return result;
+	}else if (checkLength(email.val())>100) {
+		result = "邮箱过长，请重新输入";
+		return result;
+	}else if (stripscriptForEmail(email.val())) {
+		result = "邮箱含有特殊字符，请重新输入";
+		return result;
+	}else {
+	}
+	return "";
+}
+
+
+
+
+function replaceBracketsByJquertObject(jquertObject) {
+	CtoH(jquertObject);
+	var inputValue = jquertObject.val();
+	while (inputValue.indexOf("<") != -1) {
+		inputValue = inputValue.replace("<", "[");
+	}
+	while (inputValue.indexOf(">") != -1) {
+		inputValue = inputValue.replace(">", "]");
+	}
+	while (inputValue.indexOf("&") != -1) {
+		inputValue = inputValue.replace("&", " ");
+	}
+	while (inputValue.indexOf("——") != -1) {
+		inputValue = inputValue.replace("——", "-");
+	}
+	jquertObject.val($.trim(inputValue));
+}
+
+
+function CtoH(jquertObject) {
+	var str = jquertObject.val();
+	var result = "";
+	for ( var i = 0; i < str.length; i++) {
+		code = str.charCodeAt(i);
+		if (code >= 65281 && code <= 65373) {
+			result += String.fromCharCode(str.charCodeAt(i) - 65248);
+		} else if (code == 12288) {
+			result += String.fromCharCode(str.charCodeAt(i) - 12256);
+		} else {
+			result += str.charAt(i);
+		}
+	}
+	jquertObject.val(result);
+}
+
+function isChinese(temp)
+{
+	var re=/[^\u4e00-\u9fa5]/;
+	if(re.test(temp)) return false;
+	return true;
+}
+function checkLength(txtObj) {
+	var val = txtObj || '';
+	var valLength = 0;
+	for (var ii = 0; ii < val.length; ii++) {
+		var word=val.charAt(ii)+""
+
+		if (isChinese(word)) {
+			valLength += 2;
+		} else {
+			valLength++;
+		}
+	}
+	return valLength;
+}
+
+//过滤特殊字符(邮箱专用，不过滤@号)
+function stripscriptForEmail(value) {
+	var pattern = new RegExp("[`~!$%^&+=|':;',\\\\<>/?~！￥……&&;|‘；：”“'，？\"]");
+	if(pattern.test(value))
+	{
+		return true;
+	}
+	return false;
+}

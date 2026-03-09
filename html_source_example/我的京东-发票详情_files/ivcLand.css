@@ -1,0 +1,42 @@
+/* user-invoice_m/0.0.1 base.css Date:2018-02-01 11:30:11 */
+@charset "UTF-8";
+
+
+.form .itxt, .form .text {
+    height: 18px;
+    width: 180px;
+    padding: 5px 23px 5px 5px;
+}
+
+.form .address {
+    width: 300px;
+}
+
+.invoice-form .f-subtit3 {
+    position: relative;
+    float: left;
+    width: 518px;
+    line-height: 30px;
+    margin-left: 10px;
+    margin-bottom: 15px;
+}
+
+.invoice-wrap .vat-head .title {
+    float: left;
+    height: 32px;
+    font: 700 12px/30px SimSun;
+    color: #333;
+}
+.tb-e-invoice .download-trigger {
+    display: inline-block;
+    width: auto;
+}
+.tb-e-invoice .download-trigger i {
+    background-position: 0 0;
+    background-image: url(../img/download.png);
+    background-size: 29px 12px;
+}
+.tb-e-invoice .download-trigger i.download-icon {
+    margin-right: 1px;
+    background-position: -17px 0;
+}
