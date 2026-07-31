@@ -1,5 +1,6 @@
 import argparse
 import os
+import random
 import sys
 import time
 from datetime import datetime, timedelta
@@ -14,6 +15,32 @@ from selenium.webdriver.edge.service import Service as EdgeService
 
 
 JD_INVOICE_URL = "https://myivc.jd.com/fpzz/index.action"
+
+
+def random_user_agent() -> str:
+    candidates = [
+        (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/123.0.0.0 Safari/537.36"
+        ),
+        (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/122.0.0.0 Safari/537.36"
+        ),
+        (
+            "Mozilla/5.0 (X11; Linux x86_64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/122.0.0.0 Safari/537.36"
+        ),
+    ]
+    return random.choice(candidates)
+
+
+def human_delay(base: float = 0.8, jitter: float = 0.7) -> None:
+    """模拟人类随机停顿，降低操作节奏过于机械导致的风控概率。"""
+    time.sleep(base + random.random() * jitter)
 
 
 def parse_args() -> argparse.Namespace:
@@ -47,13 +74,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--driver-path",
         default=None,
-        help="ChromeDriver 可执行文件路径（默认：自动从 PATH 查找）",
+        help="EdgeDriver 可执行文件路径（默认：自动从 PATH 查找）",
+    )
+    parser.add_argument(
+        "--session-dir",
+        default="./jd_session_data",
+        help="浏览器会话目录（保存登录态，默认：./jd_session_data）",
     )
     return parser.parse_args()
 
 
 def create_driver(
     download_dir: str,
+    session_dir: str,
     headless: bool = False,
     driver_path: Optional[str] = None,
 ) -> webdriver.Edge:
@@ -67,11 +100,13 @@ def create_driver(
     edge_options.add_argument("--disable-gpu")
     edge_options.add_argument("--window-size=1280,800")
     edge_options.add_argument("--remote-debugging-port=0")
+    edge_options.add_argument("--disable-blink-features=AutomationControlled")
+    edge_options.add_argument("--no-default-browser-check")
+    edge_options.add_argument("--disable-infobars")
+    edge_options.add_argument(f"--user-agent={random_user_agent()}")
     # 关闭下载安全提示（否则 Edge 可能弹“此类文件可能有害，是否保留”）
     edge_options.add_argument("--safebrowsing-disable-download-protection")
-    edge_options.add_argument(
-        f"--user-data-dir={os.path.join(download_dir, '.edge-user-data')}"
-    )
+    edge_options.add_argument(f"--user-data-dir={os.path.abspath(session_dir)}")
 
     prefs = {
         "download.default_directory": os.path.abspath(download_dir),
@@ -81,6 +116,8 @@ def create_driver(
         "safebrowsing.enabled": False,
     }
     edge_options.add_experimental_option("prefs", prefs)
+    edge_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    edge_options.add_experimental_option("useAutomationExtension", False)
 
     if driver_path:
         service = EdgeService(executable_path=driver_path)
@@ -88,6 +125,19 @@ def create_driver(
     else:
         # 依赖 Selenium Manager 自动管理 EdgeDriver
         driver = webdriver.Edge(options=edge_options)
+    try:
+        driver.execute_cdp_cmd(
+            "Page.addScriptToEvaluateOnNewDocument",
+            {
+                "source": (
+                    "Object.defineProperty(navigator, 'webdriver', "
+                    "{get: () => undefined});"
+                )
+            },
+        )
+    except Exception:
+        # 部分驱动版本可能不支持该 CDP 调用，不影响主流程。
+        pass
     return driver
 
 
@@ -152,7 +202,7 @@ def wait_for_login(
         if time.time() - start > timeout:
             raise TimeoutError("等待登录超时，请重新运行脚本并尽快完成登录。")
 
-        time.sleep(5)
+        human_delay(4.0, 2.0)
 
 
 def parse_order_date(date_text: str) -> Optional[datetime]:
@@ -168,6 +218,27 @@ def parse_order_date(date_text: str) -> Optional[datetime]:
             continue
     print(f"[警告] 无法解析订单日期：{date_text!r}")
     return None
+
+
+def safe_switch_to_window(driver: webdriver.Edge, handle: str) -> bool:
+    try:
+        if handle in driver.window_handles:
+            driver.switch_to.window(handle)
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def safe_close_window(driver: webdriver.Edge, handle: str) -> bool:
+    try:
+        if not safe_switch_to_window(driver, handle):
+            return False
+        driver.close()
+        return True
+    except Exception as exc:
+        print(f"[警告] 关闭窗口失败（已忽略）：{exc}", file=sys.stderr)
+        return False
 
 
 def process_order_block(
@@ -206,21 +277,21 @@ def process_order_block(
         if not detail_links:
             return False
 
+        handles_before = list(driver.window_handles)
         main_handle = driver.current_window_handle
         detail_links[0].click()
-        time.sleep(2)
+        human_delay(1.2, 1.0)
 
         # 3）切换到新打开的发票详情页
-        handles = driver.window_handles
-        if len(handles) <= 1:
-            # 可能在同一页跳转
-            time.sleep(2)
-        else:
-            for h in handles:
-                if h != main_handle:
-                    driver.switch_to.window(h)
-                    break
-            time.sleep(2)
+        handles_after = list(driver.window_handles)
+        detail_handle = None
+        for h in handles_after:
+            if h not in handles_before:
+                detail_handle = h
+                break
+        if detail_handle:
+            safe_switch_to_window(driver, detail_handle)
+        human_delay(1.2, 1.0)
 
         # 4）在发票详情页中定位“查看XML”（参考 html_source_example/我的京东-发票详情.html：table.tb-e-invoice 下 a.download-trigger，em 为“查看XML”）
         wait = WebDriverWait(driver, 15)
@@ -244,32 +315,36 @@ def process_order_block(
                 pass
         if not xml_link:
             try:
-                driver.close()
-                driver.switch_to.window(main_handle)
+                if detail_handle and detail_handle != main_handle:
+                    safe_close_window(driver, detail_handle)
+                safe_switch_to_window(driver, main_handle)
             except Exception:
                 pass
             return False
 
         xml_link.click()
-        time.sleep(3)
+        human_delay(2.0, 1.5)
 
-        # 5）关闭详情页（及可能因 target="_blank" 打开的 XML 新标签），回到订单列表
+        # 5）尝试关闭非主窗口并回到订单列表。关闭失败仅告警，不中断任务。
         for handle in list(driver.window_handles):
             if handle != main_handle:
-                driver.switch_to.window(handle)
-                driver.close()
-        driver.switch_to.window(main_handle)
+                safe_close_window(driver, handle)
+        if not safe_switch_to_window(driver, main_handle):
+            # 主窗口可能已被重定向替换；退化到任意存活窗口继续后续流程。
+            alive_handles = list(driver.window_handles)
+            if alive_handles:
+                safe_switch_to_window(driver, alive_handles[0])
         return True
 
     except Exception as exc:
         print(f"[警告] 处理订单块时出错：{exc}", file=sys.stderr)
         try:
-            for h in driver.window_handles:
-                if h != driver.current_window_handle:
-                    driver.switch_to.window(h)
-                    driver.close()
-                    break
-            driver.switch_to.window(driver.window_handles[0])
+            handles = list(driver.window_handles)
+            if handles:
+                main_candidate = handles[0]
+                for h in handles[1:]:
+                    safe_close_window(driver, h)
+                safe_switch_to_window(driver, main_candidate)
         except Exception:
             pass
         return False
@@ -291,7 +366,7 @@ def crawl_orders_and_download_xml(
     total_downloaded = 0
 
     while True:
-        time.sleep(2)
+        human_delay(1.5, 1.0)
 
         # 订单列表为 table.order-tb，每个 tbody 为一个订单块（参考 我的京东--我的发票.html）
         table = driver.find_elements(By.CSS_SELECTOR, "table.order-tb")
@@ -299,14 +374,25 @@ def crawl_orders_and_download_xml(
             print("[提示] 当前页面未找到订单表格 table.order-tb。")
             break
 
-        tbodys = table[0].find_elements(By.CSS_SELECTOR, "tbody")
-        if not tbodys:
+        # 获取当前页 tbody 数量
+        tbodys_count = len(table[0].find_elements(By.CSS_SELECTOR, "tbody"))
+        if tbodys_count == 0:
             print("[提示] 当前页未找到订单 tbody。")
             break
 
         stop_paging = False
 
-        for tbody in tbodys:
+        for i in range(tbodys_count):
+            # 重新定位 table 和 tbody，避免 StaleElementReferenceException
+            try:
+                table = driver.find_elements(By.CSS_SELECTOR, "table.order-tb")
+                if not table: break
+                current_tbodys = table[0].find_elements(By.CSS_SELECTOR, "tbody")
+                if i >= len(current_tbodys): break
+                tbody = current_tbodys[i]
+            except Exception:
+                break
+
             # 跳过分隔行等（仅包含 sep-row 的 tbody）
             if tbody.find_elements(By.CSS_SELECTOR, "tr.sep-row") and not tbody.find_elements(By.CSS_SELECTOR, "span.dealtime"):
                 continue
@@ -334,9 +420,14 @@ def crawl_orders_and_download_xml(
         # 翻页：“我的发票”页使用 a.ui-pager-next 作为“下一页”（提交 indexForm）
         try:
             next_btn = driver.find_element(By.CSS_SELECTOR, "a.ui-pager-next")
+            aria_disabled = (next_btn.get_attribute("aria-disabled") or "").lower()
+            class_attr = (next_btn.get_attribute("class") or "").lower()
+            if aria_disabled == "true" or "disabled" in class_attr:
+                print("[信息] 下一页按钮已禁用，停止翻页。")
+                break
             # 若已是最后一页，可能无下一页或 class 不同，直接点击后由下一轮是否还有订单判断
             next_btn.click()
-            time.sleep(2)
+            human_delay(1.6, 1.0)
         except Exception:
             print("[信息] 未找到“下一页”或已到最后一页。")
             break
@@ -345,13 +436,25 @@ def crawl_orders_and_download_xml(
 def main() -> None:
     args = parse_args()
 
+    if args.days < 1:
+        print("[错误] --days 必须至少为 1", file=sys.stderr)
+        sys.exit(1)
+
     output_dir = os.path.abspath(args.output_dir)
+    session_dir = os.path.abspath(args.session_dir)
+
+    if output_dir == session_dir:
+        print("[错误] --output-dir 不能与 --session-dir 相同，请分别设置。", file=sys.stderr)
+        sys.exit(1)
+
     os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(session_dir, exist_ok=True)
 
     driver: Optional[webdriver.Edge] = None
     try:
         driver = create_driver(
             download_dir=output_dir,
+            session_dir=session_dir,
             headless=args.headless,
             driver_path=args.driver_path,
         )
@@ -368,12 +471,12 @@ def main() -> None:
     except Exception as exc:
         msg = str(exc)
         print(f"[错误] 任务执行失败：{msg}", file=sys.stderr)
-        # 退出码 127：chromedriver 无法启动，多为 Linux 下缺少 Chrome/Chromium 或依赖库
+        # 退出码 127：edgedriver 无法启动，多为 Linux 下缺少 Edge/Chromium 或依赖库
         if "127" in msg or "unexpectedly exited" in msg:
             print(
-                "\n[提示] 若在 Linux/WSL 下出现 chromedriver 退出码 127，请安装 Chrome/Chromium 及依赖后再试，例如：\n"
+                "\n[提示] 若在 Linux/WSL 下出现 edgedriver 退出码 127，请安装 Edge/Chromium 及依赖后再试，例如：\n"
                 "  Ubuntu/Debian: sudo apt-get update && sudo apt-get install -y chromium-browser\n"
-                "  或安装 Google Chrome 后执行: sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2\n"
+                "  或安装 Microsoft Edge 后执行: sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2\n"
                 "  若使用 Docker/Alpine，需使用带 glibc 的镜像并安装 chromium。\n",
                 file=sys.stderr,
             )

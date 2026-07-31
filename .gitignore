@@ -1,8 +1,14 @@
 # XML input files
 xml-input (manual)/
-xml-input/
+xml-input/*
 # CSV output files
-csv-output/
+csv-output/*
+# Selenium session/cache
+jd_session_data/
+jd_session_data_test/
+
+# Local screenshots/debug artifacts
+jd_login_qr.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
